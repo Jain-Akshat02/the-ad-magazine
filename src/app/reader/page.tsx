@@ -9,116 +9,110 @@ import {
   MagazinePage,
   BrandAd
 } from "../../utils/magazineState";
+import Header from "../../components/Header";
 
 export default function ReaderPage() {
   const [pages, setPages] = useState<MagazinePage[]>([]);
-  const [currentPage, setCurrentPage] = useState<number>(0);
-  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [activePageIndex, setActivePageIndex] = useState<number>(0);
   
-  // Interactive ad state
+  // Interactive ad states
   const [chatOpen, setChatOpen] = useState<boolean>(false);
   const [chatBrand, setChatBrand] = useState<BrandAd | null>(null);
   const [chatInput, setChatInput] = useState<string>("");
   const [chatHistory, setChatHistory] = useState<{ role: "user" | "assistant"; text: string; timestamp: string }[]>([]);
   const [isTyping, setIsTyping] = useState<boolean>(false);
+  
+  // Likes and CTAs states
   const [likedPages, setLikedPages] = useState<Record<string, boolean>>({});
   const [clickedCTA, setClickedCTA] = useState<Record<string, boolean>>({});
-
-  // Performance Log State (Time spent on each page)
-  const lastPageRef = useRef<number>(0);
-  const pageTimerRef = useRef<number>(0);
-
-  // Floating sparks reaction effect
   const [sparks, setSparks] = useState<{ id: number; x: number; y: number }[]>([]);
 
+  // Telemetry: Time spent on each page
+  const pageTimers = useRef<Record<string, number>>({});
+  const activePageRef = useRef<number>(0);
+
+  // References for scroll navigation
+  const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
+
   useEffect(() => {
-    setPages(getMagazinePages());
+    const loadedPages = getMagazinePages();
+    setPages(loadedPages);
     
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
-    pageTimerRef.current = Date.now();
-    return () => {
-      recordTimeSpentOnPage(lastPageRef.current);
+    // Initialize timing trackers for each page ID
+    const initialTimers: Record<string, number> = {};
+    loadedPages.forEach((p) => {
+      initialTimers[p.id] = 0;
+    });
+    pageTimers.current = {
+      ...initialTimers,
+      activeStartTime: Date.now()
     };
   }, []);
 
+  // Set up IntersectionObserver to update active page index scroll position
   useEffect(() => {
-    recordTimeSpentOnPage(lastPageRef.current);
-    lastPageRef.current = currentPage;
-    pageTimerRef.current = Date.now();
-  }, [currentPage, isMobile]);
+    if (pages.length === 0) return;
 
-  const recordTimeSpentOnPage = (pageIdx: number) => {
-    if (!pages || pages.length === 0) return;
-    const elapsedSeconds = Math.round((Date.now() - pageTimerRef.current) / 1000);
-    if (elapsedSeconds <= 0) return;
+    const observerOptions = {
+      root: null, // viewport
+      rootMargin: "-20% 0px -40% 0px", // focus area in middle of screen
+      threshold: 0.2
+    };
 
-    if (isMobile) {
-      const p = pages[pageIdx];
-      if (p && p.type === "ad" && p.brandAd) {
-        saveAdInteraction(p.brandAd.id, { timeSpent: elapsedSeconds, views: 1 });
-      }
-    } else {
-      const visibleIndices = getVisibleIndices(pageIdx);
-      visibleIndices.forEach((idx) => {
-        const p = pages[idx];
-        if (p && p.type === "ad" && p.brandAd) {
-          saveAdInteraction(p.brandAd.id, { timeSpent: elapsedSeconds, views: 1 });
+    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const index = parseInt(entry.target.getAttribute("data-page-index") || "0", 10);
+          
+          // Log time spent on the PREVIOUS active page before switching
+          const prevIndex = activePageRef.current;
+          if (prevIndex !== index) {
+            recordTimeElapsed(prevIndex);
+            
+            // Switch active page
+            setActivePageIndex(index);
+            activePageRef.current = index;
+            pageTimers.current.activeStartTime = Date.now();
+            
+            // Trigger a single view count increment for this page's brand ad
+            const targetPage = pages[index];
+            if (targetPage && targetPage.type === "ad" && targetPage.brandAd) {
+              saveAdInteraction(targetPage.brandAd.id, { views: 1 });
+            }
+          }
         }
       });
+    };
+
+    const observer = new IntersectionObserver(handleIntersection, observerOptions);
+
+    // Observe each page card element
+    pageRefs.current.forEach((el) => {
+      if (el) observer.observe(el);
+    });
+
+    return () => {
+      // Record any final duration time before unmount
+      recordTimeElapsed(activePageRef.current);
+      observer.disconnect();
+    };
+  }, [pages]);
+
+  const recordTimeElapsed = (index: number) => {
+    if (!pages || pages.length === 0 || !pages[index]) return;
+    const page = pages[index];
+    const elapsed = Math.round((Date.now() - (pageTimers.current.activeStartTime || Date.now())) / 1000);
+    
+    if (elapsed > 0 && page.type === "ad" && page.brandAd) {
+      saveAdInteraction(page.brandAd.id, { timeSpent: elapsed });
     }
   };
 
-  const getVisibleIndices = (index: number): number[] => {
-    if (index === 0) return [0];
-    if (index % 2 === 1) {
-      return index + 1 < pages.length ? [index, index + 1] : [index];
-    } else {
-      return [index - 1, index];
+  const handleScrollToPage = (index: number) => {
+    const el = pageRefs.current[index];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  };
-
-  const handleNext = () => {
-    if (isMobile) {
-      if (currentPage < pages.length - 1) {
-        setCurrentPage((prev) => prev + 1);
-      }
-    } else {
-      if (currentPage === 0) {
-        setCurrentPage(1);
-      } else {
-        const nextIdx = currentPage + (currentPage % 2 === 1 ? 2 : 1);
-        if (nextIdx < pages.length) {
-          setCurrentPage(nextIdx);
-        }
-      }
-    }
-    setChatOpen(false);
-  };
-
-  const handlePrev = () => {
-    if (isMobile) {
-      if (currentPage > 0) {
-        setCurrentPage((prev) => prev - 1);
-      }
-    } else {
-      if (currentPage === 1) {
-        setCurrentPage(0);
-      } else {
-        const prevIdx = currentPage - (currentPage % 2 === 1 ? 1 : 2);
-        if (prevIdx >= 0) {
-          setCurrentPage(prevIdx);
-        }
-      }
-    }
-    setChatOpen(false);
   };
 
   const handleLike = (brandId: string, pageId: string, e: React.MouseEvent) => {
@@ -126,7 +120,6 @@ export default function ReaderPage() {
     setLikedPages((prev) => ({ ...prev, [pageId]: !isAlreadyLiked }));
     saveAdInteraction(brandId, { likes: isAlreadyLiked ? -1 : 1 });
 
-    // Trigger sparks
     if (!isAlreadyLiked) {
       const rect = e.currentTarget.getBoundingClientRect();
       const newSparks = Array.from({ length: 8 }).map((_, i) => ({
@@ -145,7 +138,7 @@ export default function ReaderPage() {
     setClickedCTA((prev) => ({ ...prev, [pageId]: true }));
     saveAdInteraction(brandId, { clicks: 1 });
     
-    alert(`🎉 [Zap Redirect] Wheee! Zooming you away to ${brandId.toUpperCase()}'s happy product world!`);
+    alert(`🎉 [Zap Redirect] Zooming you away to ${brandId.toUpperCase()}'s happy product world!`);
     setTimeout(() => {
       setClickedCTA((prev) => ({ ...prev, [pageId]: false }));
     }, 2000);
@@ -198,7 +191,7 @@ export default function ReaderPage() {
         return "bg-radial from-pink-900/60 via-purple-950/80 to-zinc-950 border-pink-400/40";
       case "glass":
       default:
-        return "bg-radial from-stone-900 via-zinc-950 to-zinc-950 border-stone-800/60";
+        return "bg-radial from-stone-900 via-zinc-950 to-zinc-950 border-stone-850/60";
     }
   };
 
@@ -213,226 +206,14 @@ export default function ReaderPage() {
     }
   };
 
-  const renderPageCard = (idx: number, side: "left" | "right" | "cover") => {
-    if (idx < 0 || idx >= pages.length) return null;
-    const page = pages[idx];
-
-    const isLeft = side === "left";
-    const isRight = side === "right";
-
-    // Editorial layout rendering
-    if (page.type === "editorial") {
-      return (
-        <div 
-          className={`flex flex-col justify-between h-full bg-[#fdfaf2] text-stone-900 p-8 md:p-12 relative overflow-hidden transition-all duration-500 shadow-2xl border-4 border-double border-stone-300
-            ${isLeft ? "rounded-l-3xl border-r-2" : isRight ? "rounded-r-3xl border-l-2" : "rounded-3xl"}`}
-        >
-          {/* Header watermark */}
-          <div className="flex justify-between items-center text-[10px] tracking-wider text-stone-500 uppercase font-mono border-b-2 border-dashed border-stone-200 pb-2">
-            <span>📖 THEADMAGAZINE</span>
-            <span>{page.category}</span>
-          </div>
-
-          <div className="my-auto flex flex-col gap-5">
-            {page.imageUrl && (
-              <div className="w-full h-44 md:h-56 overflow-hidden rounded-2xl border-2 border-stone-900 shadow-md relative group">
-                <img
-                  src={page.imageUrl}
-                  alt={page.title}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              </div>
-            )}
-            <div>
-              <h2 className="font-black text-2xl md:text-3xl tracking-tight text-stone-900 leading-tight">
-                {page.title}
-              </h2>
-              {page.author && (
-                <p className="text-[11px] font-sans italic text-stone-500 mt-1">
-                  Penciled by {page.author} &bull; {page.readTime}
-                </p>
-              )}
-            </div>
-            
-            <p className="text-xs md:text-sm text-stone-800 font-serif leading-relaxed first-letter:text-6xl first-letter:font-black first-letter:float-left first-letter:mr-2.5 first-letter:text-pink-650">
-              {page.content}
-            </p>
-          </div>
-
-          <div className="flex justify-between items-center text-[10px] tracking-wider text-stone-500 font-mono mt-3 pt-2 border-t-2 border-dashed border-stone-200">
-            <span>{isLeft ? `PAGE ${idx}` : isRight ? `PAGE ${idx}` : "INTRO PAGE"}</span>
-            <span>Laugh &amp; Learn</span>
-          </div>
-        </div>
-      );
-    }
-
-    // Sponsor ad layout rendering
-    if (page.type === "ad" && page.brandAd) {
-      const ad = page.brandAd;
-      return (
-        <div
-          className={`flex flex-col justify-between h-full text-white p-8 md:p-12 relative overflow-hidden transition-all duration-500 border-4 border-dashed shadow-2xl
-            ${getThemeBackground(ad.theme)}
-            ${isLeft ? "rounded-l-3xl border-r-2" : isRight ? "rounded-r-3xl border-l-2" : "rounded-3xl"}`}
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(#ffffff04_1px,transparent_1px)] [background-size:16px_16px]"></div>
-          
-          <div className="flex justify-between items-center text-[9px] tracking-widest text-zinc-400 font-mono z-10">
-            <span className="bg-white/10 px-2 py-0.5 rounded-full text-yellow-350">SPONSOR PLAYGROUND 🎪</span>
-            <button
-              onClick={(e) => handleLike(ad.id, page.id, e)}
-              className="flex items-center gap-1.5 focus:outline-none group text-zinc-400 hover:text-pink-400 transition-colors cursor-pointer"
-            >
-              <span className="text-base">{likedPages[page.id] ? "💖" : "🖤"}</span>
-              <span className="font-mono text-[9px]">{likedPages[page.id] ? "Loved!" : "Like!"}</span>
-            </button>
-          </div>
-
-          {/* Ad main content */}
-          <div className="my-auto flex flex-col gap-4 z-10">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-1.5 bg-gradient-to-b from-pink-500 to-yellow-500 rounded-full animate-bounce"></div>
-              <div>
-                <h3 className="text-xl md:text-2xl font-black tracking-tight">{ad.name}</h3>
-                <p className="text-[10px] text-yellow-405 font-mono tracking-tight font-bold">{ad.tagline}</p>
-              </div>
-            </div>
-
-            <div className="w-full h-36 md:h-44 overflow-hidden rounded-2xl relative border-2 border-white/20 group shadow-lg">
-              <img
-                src={ad.imageUrl}
-                alt={ad.name}
-                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
-              <div className="absolute bottom-2.5 left-2.5 right-2.5 text-[10px] text-zinc-200">
-                <p className="line-clamp-2 md:line-clamp-3 leading-relaxed font-sans">{ad.description}</p>
-              </div>
-            </div>
-
-            {/* Bullet points */}
-            <ul className="text-[10px] md:text-xs text-zinc-350 font-mono space-y-1 bg-white/5 p-2.5 rounded-xl border border-white/10">
-              {ad.features.slice(0, 3).map((feat, i) => (
-                <li key={i} className="flex items-center gap-1.5">
-                  <span>✨</span>
-                  <span>{feat}</span>
-                </li>
-              ))}
-            </ul>
-
-            {/* Actions triggers */}
-            <div className="grid grid-cols-2 gap-3 mt-1 text-xs">
-              <button
-                onClick={() => handleCTA(ad.id, page.id)}
-                className={`py-2 px-3 rounded-xl font-bold border-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95 shadow-md cursor-pointer ${
-                  clickedCTA[page.id] ? "bg-white/10 scale-95" : getThemeColorClass(ad.theme)
-                }`}
-              >
-                {clickedCTA[page.id] ? "Connecting... ⚡" : ad.ctaText}
-              </button>
-              <button
-                onClick={() => handleOpenChat(ad)}
-                className="py-2 px-3 rounded-xl font-bold bg-white text-black hover:bg-neutral-200 border-2 border-white transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95 text-center flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
-              >
-                🤖 Ask Agent
-              </button>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center text-[10px] tracking-wider text-zinc-550 font-mono mt-3 pt-2 border-t border-white/5">
-            <span>PAGE {idx}</span>
-            <span>THEAD NETWORK ⚡</span>
-          </div>
-        </div>
-      );
-    }
-
-    return null;
-  };
-
-  const renderIndicators = () => {
-    return (
-      <div className="flex items-center gap-2 justify-center py-3 bg-zinc-950/60 backdrop-blur rounded-2xl px-6 border border-white/10 max-w-sm mx-auto mt-6 shadow-xl">
-        <button
-          onClick={handlePrev}
-          disabled={currentPage === 0}
-          className="p-1 px-3 text-xs font-mono uppercase bg-neutral-900 border border-white/10 hover:border-pink-500 hover:text-pink-400 text-white rounded-lg transition disabled:opacity-40"
-        >
-          👈 Prev
-        </button>
-        <span className="text-[11px] font-mono text-zinc-400 px-2.5">
-          {currentPage + 1} / {pages.length}
-        </span>
-        <button
-          onClick={handleNext}
-          disabled={
-            isMobile
-              ? currentPage === pages.length - 1
-              : currentPage >= pages.length - 2
-          }
-          className="p-1 px-3 text-xs font-mono uppercase bg-neutral-900 border border-white/10 hover:border-pink-500 hover:text-pink-400 text-white rounded-lg transition disabled:opacity-40"
-        >
-          Next 👉
-        </button>
-      </div>
-    );
-  };
-
-  const renderSpread = () => {
-    if (pages.length === 0) return null;
-    
-    if (currentPage === 0) {
-      return (
-        <div className="max-w-xl mx-auto w-full h-[650px] transition-all duration-300">
-          {renderPageCard(0, "cover")}
-        </div>
-      );
-    }
-
-    const indices = getVisibleIndices(currentPage);
-    const leftIdx = indices[0];
-    const rightIdx = indices.length > 1 ? indices[1] : -1;
-
-    return (
-      <div className="flex w-full items-center justify-center max-w-5xl h-[680px] bg-gradient-to-br from-neutral-950 via-zinc-900 to-black p-4 rounded-3xl border-4 border-dashed border-white/10 shadow-3xl relative">
-        <div className="grid grid-cols-2 w-full h-full gap-0 relative">
-          
-          <div className="h-full z-10">
-            {renderPageCard(leftIdx, "left")}
-          </div>
-
-          {/* Spine crease shadow */}
-          <div className="absolute top-0 bottom-0 left-1/2 w-[24px] -ml-[12px] z-20 pointer-events-none bg-gradient-to-r from-black/45 via-black/90 to-black/45 border-l border-r border-black/40"></div>
-          
-          <div className="h-full z-10">
-            {rightIdx !== -1 ? (
-              renderPageCard(rightIdx, "right")
-            ) : (
-              <div className="h-full bg-zinc-950 rounded-r-3xl border-l-2 border-zinc-800 flex items-center justify-center p-8 text-center border-4 border-double border-zinc-900">
-                <div>
-                  <h4 className="text-pink-500 font-mono text-sm uppercase font-bold">SLOT OPEN FOR SPONSOR! 🎫</h4>
-                  <p className="text-xs text-zinc-550 mt-2">Become a sponsor to list your custom AI ad page right here in real time!</p>
-                  <Link href="/buy-page" className="inline-block mt-4 text-xs font-mono font-bold py-2.5 px-5 rounded-xl bg-white text-black hover:bg-neutral-200 transition">
-                    Book Placement! 🚀
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-[#0d0914] text-white flex flex-col justify-between font-sans selection:bg-pink-500 relative">
+    <div className="min-h-screen bg-[#0d0914] text-white flex flex-col justify-between font-sans selection:bg-pink-500 relative scroll-smooth">
       
-      {/* Confetti spark markers */}
+      {/* Floating Spark Particle Indicators on Like */}
       {sparks.map((spark) => (
         <span
           key={spark.id}
-          className="absolute text-xl pointer-events-none animate-ping z-50"
+          className="fixed text-xl pointer-events-none animate-ping z-50 transition-all duration-300"
           style={{ left: spark.x, top: spark.y }}
         >
           ✨
@@ -440,49 +221,243 @@ export default function ReaderPage() {
       ))}
 
       {/* Header */}
-      <header className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-zinc-950/40 backdrop-blur sticky top-0 z-40">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="h-7 w-7 rounded-lg bg-gradient-to-tr from-pink-500 to-yellow-500 flex items-center justify-center font-bold text-black text-sm rotate-[-4deg] group-hover:rotate-6">ad</div>
-          <span className="font-extrabold text-base tracking-tight text-zinc-200">thead<span className="text-pink-500">magazine</span></span>
-        </Link>
+      <Header />
+
+      {/* Main vertical loop container (takes the full width of the screen) */}
+      <main className="flex-1 w-full bg-zinc-950/20 py-2 relative flex flex-col items-center">
         
-        <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="text-xs tracking-wider uppercase font-mono text-cyan-400 hover:text-white transition">
-            📈 Brand Dashboard &rarr;
-          </Link>
-          <Link href="/buy-page" className="py-2 px-3 rounded-xl bg-pink-550 text-xs font-bold text-black hover:scale-105 active:scale-95 transition">
-            Buy Ad Page 🛒
-          </Link>
+        {/* Floating Outline Navigation Panel (TOC) on the right */}
+        <aside className="fixed right-6 top-1/4 hidden lg:flex flex-col gap-3 bg-zinc-950/80 border border-white/10 p-3 rounded-2xl backdrop-blur-xl z-30 shadow-2xl">
+          <span className="text-[9px] font-mono text-zinc-550 uppercase tracking-widest text-center border-b border-white/5 pb-1">Chapters</span>
+          {pages.map((p, idx) => (
+            <button
+              key={p.id}
+              onClick={() => handleScrollToPage(idx)}
+              className={`text-[10px] font-mono text-left py-1.5 px-3 rounded-lg border transition-all cursor-pointer truncate max-w-[155px] ${
+                activePageIndex === idx
+                  ? "bg-white text-black border-white font-bold"
+                  : "bg-transparent text-zinc-400 border-transparent hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              {idx === 0 ? "📔 Issue Cover" : p.type === "ad" ? `⚡ ${p.brandAd?.name || p.title}` : `📖 ${p.title}`}
+            </button>
+          ))}
+        </aside>
+
+        {/* Scroll Feed Content Container */}
+        <div className="w-full flex flex-col gap-12 px-4 py-8 max-w-5xl mx-auto">
+          {pages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <span className="h-6 w-6 border-2 border-pink-550 border-t-white animate-spin rounded-full"></span>
+              <p className="text-xs font-mono text-zinc-550">Synthesizing scrolling layouts...</p>
+            </div>
+          ) : (
+            pages.map((page, idx) => {
+              
+              // Reference function to assign component ref
+              const assignRef = (el: HTMLDivElement | null) => {
+                pageRefs.current[idx] = el;
+              };
+
+              // COVER PAGE CARD RENDERING
+              if (page.id === "cover") {
+                return (
+                  <div
+                    key={page.id}
+                    ref={assignRef}
+                    data-page-index={idx}
+                    className="w-full min-h-[85vh] rounded-3xl bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950 via-[#100b1a] to-[#07050a] border-4 border-dashed border-white/10 p-8 md:p-16 flex flex-col justify-between shadow-2xl relative overflow-hidden transition-all duration-300 scroll-mt-20 group"
+                  >
+                    <div className="absolute inset-0 bg-[radial-gradient(#ffffff03_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none"></div>
+                    
+                    <div className="flex justify-between items-center text-[10px] font-mono tracking-widest text-zinc-400 border-b border-white/10 pb-4">
+                      <span>THEADMAGAZINE PUBLICATION &bull; AUTUMN &apos;26 IDLE</span>
+                      <span>ISSUE COVER 📔</span>
+                    </div>
+
+                    <div className="my-auto flex flex-col items-center text-center gap-6 py-8">
+                      <div className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] uppercase font-mono tracking-widest text-yellow-450 font-bold mb-2">
+                        🎉 Interactive Scroll Feed Active!
+                      </div>
+                      
+                      <h1 className="text-4xl md:text-7xl font-black tracking-tight leading-none bg-gradient-to-r from-pink-550 via-purple-400 to-yellow-405 bg-clip-text text-transparent drop-shadow-md">
+                        theadmagazine
+                      </h1>
+                      
+                      <h2 className="text-xl md:text-2xl font-bold font-serif max-w-xl text-zinc-200">
+                        {page.title}
+                      </h2>
+                      
+                      <p className="text-xs md:text-sm text-zinc-400 max-w-lg leading-relaxed font-sans mt-2">
+                        {page.content}
+                      </p>
+
+                      <button
+                        onClick={() => handleScrollToPage(1)}
+                        className="mt-6 flex flex-col items-center gap-1.5 animate-bounce text-xs font-mono text-pink-500 hover:text-white transition cursor-pointer"
+                      >
+                        <span>Scroll down to read stories &amp; play with AI</span>
+                        <span>👇</span>
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between items-center text-[9px] font-mono tracking-wider text-zinc-550 border-t border-white/5 pt-4">
+                      <span>&copy; theadmagazine networks</span>
+                      <span>PAGE 1</span>
+                    </div>
+                  </div>
+                );
+              }
+
+              // EDITORIAL PAGE CARDS RENDERING
+              if (page.type === "editorial") {
+                return (
+                  <div
+                    key={page.id}
+                    ref={assignRef}
+                    data-page-index={idx}
+                    className="w-full min-h-[85vh] rounded-3xl bg-[#fdfaf2] text-stone-900 border-4 border-double border-stone-300 p-8 md:p-16 flex flex-col justify-between shadow-2xl scroll-mt-20 relative group"
+                  >
+                    <div className="flex justify-between items-center text-[10px] tracking-wider text-stone-500 uppercase font-mono border-b-2 border-dashed border-stone-200 pb-3">
+                      <span>📖 Editorial Segment</span>
+                      <span>{page.category}</span>
+                    </div>
+
+                    <div className="my-auto flex flex-col lg:flex-row items-center gap-8 py-8">
+                      {page.imageUrl && (
+                        <div className="w-full lg:w-1/2 h-56 md:h-80 rounded-2xl border-4 border-stone-900 shadow-xl overflow-hidden relative shrink-0">
+                          <img
+                            src={page.imageUrl}
+                            alt={page.title}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103"
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="flex flex-col gap-4">
+                        <h2 className="font-extrabold text-2xl md:text-4xl tracking-tight leading-tight text-stone-900 font-serif">
+                          {page.title}
+                        </h2>
+                        {page.author && (
+                          <p className="text-[10px] font-sans font-semibold tracking-wide text-stone-500 uppercase mt-0.5">
+                            Penciled by {page.author} &bull; {page.readTime}
+                          </p>
+                        )}
+                        <p className="text-xs md:text-sm text-stone-800 font-serif leading-relaxed first-letter:text-6xl first-letter:font-black first-letter:float-left first-letter:mr-3 first-letter:text-pink-650 mt-2">
+                          {page.content}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-[10px] tracking-wider text-stone-500 font-mono border-t-2 border-dashed border-stone-200 pt-3">
+                      <span>theadmagazine issue &bull; column archives</span>
+                      <span>PAGE {idx + 1}</span>
+                    </div>
+                  </div>
+                );
+              }
+
+              // BRAND ADVERTISEMENT CARD RENDERING
+              if (page.type === "ad" && page.brandAd) {
+                const ad = page.brandAd;
+                return (
+                  <div
+                    key={page.id}
+                    ref={assignRef}
+                    data-page-index={idx}
+                    className={`w-full min-h-[85vh] rounded-3xl border-4 border-dashed p-8 md:p-16 flex flex-col justify-between shadow-2xl relative overflow-hidden transition-all duration-300 scroll-mt-20 group
+                      ${getThemeBackground(ad.theme)}`}
+                  >
+                    <div className="absolute inset-0 bg-[radial-gradient(#ffffff03_1px,transparent_1px)] [background-size:18px_18px] pointer-events-none"></div>
+
+                    <div className="flex justify-between items-center text-[9px] tracking-widest text-zinc-400 font-mono z-10 border-b border-white/5 pb-4">
+                      <span className="bg-white/10 px-2.5 py-0.5 rounded-full text-yellow-350">SPONSOR PLAYGROUND 🎪</span>
+                      <button
+                        onClick={(e) => handleLike(ad.id, page.id, e)}
+                        className="flex items-center gap-1.5 focus:outline-none group text-zinc-400 hover:text-pink-400 transition-colors cursor-pointer"
+                      >
+                        <span className="text-base">{likedPages[page.id] ? "💖" : "🖤"}</span>
+                        <span className="font-mono text-[9px]">{likedPages[page.id] ? "Loved!" : "Like!"}</span>
+                      </button>
+                    </div>
+
+                    <div className="my-auto flex flex-col lg:flex-row items-center gap-8 py-8 z-10">
+                      
+                      <div className="w-full lg:w-1/2 h-56 md:h-80 rounded-2xl overflow-hidden border-2 border-white/10 relative shadow-2xl shrink-0 group">
+                        <img
+                          src={ad.imageUrl}
+                          alt={ad.name}
+                          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-102"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
+                        <div className="absolute bottom-4 left-4 right-4 text-[11px] text-zinc-200 leading-relaxed font-sans">
+                          {ad.description}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-5 w-full">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-1.5 bg-gradient-to-b from-pink-500 to-yellow-500 rounded-full"></div>
+                          <div>
+                            <h3 className="text-2xl md:text-3xl font-black tracking-tight">{ad.name}</h3>
+                            <p className="text-xs text-yellow-405 font-mono tracking-tight font-bold">{ad.tagline}</p>
+                          </div>
+                        </div>
+
+                        {/* Feature bullets */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-zinc-300 font-mono bg-white/5 p-4 rounded-xl border border-white/10 shadow-inner">
+                          {ad.features.map((feat, i) => (
+                            <div key={i} className="flex items-center gap-1.5">
+                              <span>✨</span>
+                              <span>{feat}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3 text-xs w-full mt-2">
+                          <button
+                            onClick={() => handleCTA(ad.id, page.id)}
+                            className={`flex-1 py-3 px-4 rounded-xl font-bold border-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95 shadow-lg text-center cursor-pointer ${
+                              clickedCTA[page.id] ? "bg-white/10 scale-95" : getThemeColorClass(ad.theme)
+                            }`}
+                          >
+                            {clickedCTA[page.id] ? "Connecting... ⚡" : ad.ctaText}
+                          </button>
+                          <button
+                            onClick={() => handleOpenChat(ad)}
+                            className="flex-1 py-3 px-4 rounded-xl font-bold bg-white text-black hover:bg-neutral-200 border-2 border-white transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95 text-center flex items-center justify-center gap-1.5 shadow-lg cursor-pointer"
+                          >
+                            🤖 Chat with Agent
+                          </button>
+                        </div>
+                      </div>
+
+                    </div>
+
+                    <div className="flex justify-between items-center text-[10px] tracking-wider text-zinc-550 font-mono border-t border-white/5 pt-4">
+                      <span>thead ad network telemetry ready</span>
+                      <span>PAGE {idx + 1}</span>
+                    </div>
+                  </div>
+                );
+              }
+
+              return null;
+            })
+          )}
         </div>
-      </header>
 
-      {/* Main Magazine stage */}
-      <main className="flex-1 flex flex-col justify-center items-center py-6 px-4 md:px-8">
-        {pages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3">
-            <span className="h-6 w-6 border-2 border-pink-550 border-t-white animate-spin rounded-full"></span>
-            <p className="text-xs font-mono text-zinc-550">Compiling goofy stories...</p>
-          </div>
-        ) : isMobile ? (
-          <div className="w-full max-w-md h-[580px]">
-            {renderPageCard(currentPage, "cover")}
-          </div>
-        ) : (
-          renderSpread()
-        )}
-
-        {pages.length > 0 && renderIndicators()}
       </main>
 
       {/* Footer */}
-      <footer className="py-4 border-t border-white/10 uppercase tracking-widest text-[9px] text-zinc-550 text-center font-mono bg-black/40">
-        &copy; 2026 theadmagazine pub &bull; interactive AI playground
+      <footer className="py-6 border-t border-white/10 uppercase tracking-widest text-[9px] text-zinc-550 text-center font-mono bg-black/40">
+        &copy; 2026 theadmagazine pub &bull; modern scrolling feed edition
       </footer>
 
       {/* AI REPRESENTATIVE CHAT SIDE PANEL */}
       {chatOpen && chatBrand && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex justify-end">
-          <div className="w-full max-w-md bg-[#0e0a16] border-l border-white/10 h-full flex flex-col justify-between shadow-2xl relative animate-slide-in">
+          <div className="w-full max-w-md bg-[#0e0a16] border-l border-white/10 h-full flex flex-col justify-between shadow-2xl relative overflow-hidden animate-slide-in">
             {/* Header */}
             <div className="p-4 border-b border-white/10 flex items-center justify-between bg-zinc-950">
               <div className="flex items-center gap-3">
@@ -511,20 +486,20 @@ export default function ReaderPage() {
                   <div className={`max-w-[85%] rounded-2xl p-3 leading-relaxed shadow-md border ${
                     chat.role === "user" 
                       ? "bg-white text-black border-white rounded-tr-none" 
-                      : "bg-purple-950/40 border-pink-500/20 text-zinc-105 rounded-tl-none font-mono"
+                      : "bg-purple-950/40 border-pink-500/20 text-zinc-100 rounded-tl-none font-mono"
                   }`}>
                     <p>{chat.text}</p>
-                    <span className="block text-[8px] text-zinc-500 text-right mt-1">{chat.timestamp}</span>
+                    <span className="block text-[8px] text-zinc-500 text-right mt-1 font-mono">{chat.timestamp}</span>
                   </div>
                 </div>
               ))}
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className="bg-zinc-900 border border-white/5 text-zinc-405 rounded-xl rounded-tl-none p-3 shadow-md">
+                  <div className="bg-zinc-900 border border-white/5 text-zinc-400 rounded-xl rounded-tl-none p-3 shadow-md">
                     <div className="flex gap-1.5 items-center py-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-pink-500 animate-bounce"></span>
-                      <span className="h-1.5 w-1.5 rounded-full bg-pink-500 animate-bounce [animation-delay:0.2s]"></span>
-                      <span className="h-1.5 w-1.5 rounded-full bg-pink-500 animate-bounce [animation-delay:0.4s]"></span>
+                      <span className="h-1.5 w-1.5 rounded-full bg-pink-550 animate-bounce [animation-delay:0.2s]"></span>
+                      <span className="h-1.5 w-1.5 rounded-full bg-pink-550 animate-bounce [animation-delay:0.4s]"></span>
                     </div>
                   </div>
                 </div>
@@ -536,19 +511,19 @@ export default function ReaderPage() {
               <div className="flex flex-wrap gap-1.5 mb-3">
                 <button
                   onClick={() => handleSendMessage("Show me your features!")}
-                  className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-zinc-900 border border-white/10 hover:border-pink-505 text-zinc-400 hover:text-white transition"
+                  className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-zinc-900 border border-white/10 hover:border-pink-500 text-zinc-405 hover:text-white transition"
                 >
                   ⚡ Features
                 </button>
                 <button
                   onClick={() => handleSendMessage("How much does it cost?")}
-                  className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-zinc-900 border border-white/10 hover:border-pink-505 text-zinc-400 hover:text-white transition"
+                  className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-zinc-900 border border-white/10 hover:border-pink-500 text-zinc-405 hover:text-white transition"
                 >
                   💵 Price
                 </button>
                 <button
-                  onClick={() => handleSendMessage("Is it environmental / organic?")}
-                  className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-zinc-900 border border-white/10 hover:border-pink-505 text-zinc-400 hover:text-white transition"
+                  onClick={() => handleSendMessage("Tell me something environmental.")}
+                  className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-zinc-900 border border-white/10 hover:border-pink-500 text-zinc-405 hover:text-white transition"
                 >
                   🌱 Eco-Specs
                 </button>
@@ -565,7 +540,7 @@ export default function ReaderPage() {
                 />
                 <button
                   onClick={() => handleSendMessage()}
-                  className="p-2 rounded-xl bg-pink-500 text-black hover:bg-pink-600 transition cursor-pointer"
+                  className="p-2 rounded-xl bg-pink-500 text-black hover:bg-pink-650 transition cursor-pointer"
                 >
                   🚀
                 </button>

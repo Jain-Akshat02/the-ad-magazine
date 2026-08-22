@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrandAd, simulateAIChat } from "../../utils/magazineState";
+import Header from "../../components/Header";
 
 const PRESET_IMAGES = [
   { name: "TickTock Toys 🕰️", url: "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?auto=format&fit=crop&q=80&w=1000" },
@@ -104,6 +105,7 @@ export default function BuyPage() {
         const list: BrandAd[] = stored ? JSON.parse(stored) : [];
         list.push(newBrand);
         localStorage.setItem("thead_custom_ads", JSON.stringify(list));
+        localStorage.setItem("thead_subscribed", "true");
       }
 
       setIsProcessing(false);
@@ -137,20 +139,7 @@ export default function BuyPage() {
     <div className="min-h-screen bg-[#0d0914] text-white flex flex-col justify-between font-sans selection:bg-pink-500">
       
       {/* Header */}
-      <header className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-zinc-950/40 backdrop-blur sticky top-0 z-40">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="h-7 w-7 rounded-lg bg-gradient-to-tr from-pink-500 to-yellow-500 flex items-center justify-center font-bold text-black text-xs rotate-[-4deg] group-hover:rotate-6">ad</div>
-          <span className="font-extrabold text-base tracking-tight text-zinc-200">thead<span className="text-pink-500">magazine</span></span>
-        </Link>
-        <div className="flex items-center gap-6">
-          <Link href="/reader" className="text-xs tracking-wider uppercase font-mono text-zinc-350 hover:text-pink-400 transition">
-            📖 Magazine Reader
-          </Link>
-          <Link href="/dashboard" className="text-xs tracking-wider uppercase font-mono text-zinc-350 hover:text-cyan-400 transition">
-            📈 Brand Dashboard
-          </Link>
-        </div>
-      </header>
+      <Header />
 
       {/* Main split-screen */}
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-5 gap-8">

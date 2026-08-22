@@ -9,6 +9,7 @@ import {
   BrandAd,
   AdInteraction
 } from "../../utils/magazineState";
+import Header from "../../components/Header";
 
 export default function DashboardPage() {
   const [brands, setBrands] = useState<BrandAd[]>([]);
@@ -19,7 +20,7 @@ export default function DashboardPage() {
   const loadStats = () => {
     const pages = getMagazinePages();
     const allBrands: BrandAd[] = [];
-    
+
     DEFAULT_BRANDS.forEach(b => {
       if (!allBrands.some(e => e.id === b.id)) allBrands.push(b);
     });
@@ -33,7 +34,7 @@ export default function DashboardPage() {
     });
 
     setBrands(allBrands);
-    
+
     let currentBrand = selectedBrand;
     if (!currentBrand && allBrands.length > 0) {
       currentBrand = allBrands[0];
@@ -94,30 +95,16 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#0d0914] text-white flex flex-col justify-between font-sans selection:bg-pink-500">
-      
+
       {/* Header */}
-      <header className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-zinc-950/40 backdrop-blur sticky top-0 z-40">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="h-7 w-7 rounded-lg bg-gradient-to-tr from-pink-500 to-yellow-500 flex items-center justify-center font-bold text-black text-xs rotate-[-4deg] group-hover:rotate-6">ad</div>
-          <span className="font-extrabold text-base tracking-tight text-zinc-200">thead<span className="text-pink-500">magazine</span></span>
-        </Link>
-        
-        <div className="flex items-center gap-6">
-          <Link href="/reader" className="text-xs tracking-wider uppercase font-mono text-zinc-400 hover:text-white transition">
-            👈 Back to Reader View
-          </Link>
-          <Link href="/buy-page" className="py-1.5 px-3 rounded-xl bg-pink-500 text-xs font-bold text-black hover:scale-105 active:scale-95 transition">
-            Buy Ad Page 🛒
-          </Link>
-        </div>
-      </header>
+      <Header />
 
       {/* Main Grid */}
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-4 gap-8">
-        
+
         {/* Left Col: Lists & Brawlboard */}
         <div className="lg:col-span-1 flex flex-col gap-6">
-          
+
           <div className="bg-zinc-950/50 rounded-3xl border-2 border-white/5 p-4 flex flex-col gap-3">
             <h3 className="text-xs font-mono tracking-widest uppercase text-pink-400 font-bold mb-1">Your Advertisers 📢</h3>
             <div className="flex flex-col gap-2">
@@ -125,11 +112,10 @@ export default function DashboardPage() {
                 <button
                   key={b.id}
                   onClick={() => handleSelectBrand(b)}
-                  className={`w-full py-2.5 px-3 rounded-xl text-left text-xs font-mono font-medium flex items-center justify-between transition-all border-2 cursor-pointer ${
-                    selectedBrand?.id === b.id
+                  className={`w-full py-2.5 px-3 rounded-xl text-left text-xs font-mono font-medium flex items-center justify-between transition-all border-2 cursor-pointer ${selectedBrand?.id === b.id
                       ? "bg-white text-black border-white"
                       : "bg-zinc-900 border-white/5 text-zinc-300 hover:bg-neutral-900"
-                  }`}
+                    }`}
                 >
                   <span className="truncate">{b.name}</span>
                   {selectedBrand?.id === b.id && (
@@ -146,7 +132,7 @@ export default function DashboardPage() {
               <h3 className="text-xs font-mono tracking-widest uppercase text-cyan-400 font-bold">Brand Brawlboard 🏆</h3>
               <p className="text-[10px] text-zinc-400 font-sans mt-0.5">Who is scoring the most fun clicks?</p>
             </div>
-            
+
             <div className="flex flex-col gap-4">
               {leaderboard.map((item, idx) => (
                 <div key={item.brand.id} className="flex flex-col gap-1 font-mono">
@@ -157,7 +143,7 @@ export default function DashboardPage() {
                     <span className="text-white font-bold">{item.engagements} pts</span>
                   </div>
                   <div className="w-full h-2 bg-neutral-900 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className="h-full bg-gradient-to-r from-pink-500 to-yellow-405 rounded-full transition-all duration-500"
                       style={{ width: `${Math.min((item.engagements / Math.max(...leaderboard.map(l => l.engagements), 1)) * 100, 100)}%` }}
                     ></div>
@@ -190,13 +176,13 @@ export default function DashboardPage() {
                   href="/reader"
                   className="z-10 text-xs font-bold font-mono bg-pink-500 text-black hover:bg-pink-600 transition-all hover:scale-105 py-2.5 px-4 rounded-xl shadow-md cursor-pointer"
                 >
-                  Inspect Ad Slide &rarr;
+                  {"Inspect Ad Slide →"}
                 </Link>
               </div>
 
               {/* Stats Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                
+
                 <div className="bg-zinc-950/40 rounded-2xl border-2 border-white/5 p-4 flex flex-col justify-between">
                   <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-500 block">👀 Views</span>
                   <span className="text-2xl font-black text-white mt-2">{interactions.views}</span>
@@ -290,7 +276,7 @@ export default function DashboardPage() {
 
               {/* Live Feeds */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
+
                 {/* Profile summary */}
                 <div className="bg-zinc-950 border-2 border-white/5 rounded-3xl p-5 md:col-span-1 flex flex-col justify-between shadow-md">
                   <div>
@@ -327,9 +313,8 @@ export default function DashboardPage() {
                     {interactions.chats && interactions.chats.length > 0 ? (
                       interactions.chats.map((chat, idx) => (
                         <div key={idx} className="flex gap-2">
-                          <span className={`text-[9px] font-mono px-2 py-0.5 rounded h-fit shrink-0 font-bold ${
-                            chat.role === "user" ? "bg-white text-black" : "bg-pink-650 text-white"
-                          }`}>
+                          <span className={`text-[9px] font-mono px-2 py-0.5 rounded h-fit shrink-0 font-bold ${chat.role === "user" ? "bg-white text-black" : "bg-pink-650 text-white"
+                            }`}>
                             {chat.role === "user" ? "CUSTOMER" : selectedBrand.aiName.toUpperCase()}
                           </span>
                           <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-xs text-zinc-300 flex-1">
@@ -343,7 +328,7 @@ export default function DashboardPage() {
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 mb-2 opacity-35">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 0 1-.92 1.61c-.16.16-.33.315-.506.462a.75.75 0 0 0 .515 1.282A8.966 8.966 0 0 0 12 20.25Z" />
                         </svg>
-                        No chat logs recorded yet. <br/> Open the reader and type a message to start!
+                        No chat logs recorded yet. <br /> Open the reader and type a message to start!
                       </div>
                     )}
                   </div>

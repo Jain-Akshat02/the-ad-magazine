@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { getMagazinePages, DEFAULT_BRANDS } from "../utils/magazineState";
+import Header from "../components/Header";
 
 export default function Home() {
   const [pagesCount, setPagesCount] = useState<number>(0);
@@ -25,25 +26,7 @@ export default function Home() {
       <div className="absolute inset-0 bg-[radial-gradient(#ffffff08_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none"></div>
 
       {/* Navigation */}
-      <header className="px-6 py-5 flex items-center justify-between border-b border-white/10 bg-zinc-950/50 backdrop-blur z-10 relative">
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-pink-500 via-purple-600 to-yellow-450 flex items-center justify-center font-black text-black text-lg shadow-lg rotate-[-4deg] group-hover:rotate-6 transition-all duration-300">
-            ad
-          </div>
-          <span className="font-black text-xl tracking-tight text-white font-sans group-hover:text-pink-400 transition-colors">
-            thead<span className="text-pink-500">magazine</span>
-          </span>
-        </Link>
-        <div className="flex items-center gap-5 text-xs font-mono tracking-wider uppercase text-zinc-350">
-          <Link href="/reader" className="hover:text-pink-400 transition hover:scale-105">📖 Read Issue</Link>
-          <span className="text-zinc-800">|</span>
-          <Link href="/dashboard" className="hover:text-cyan-400 transition hover:scale-105">⚡ Portal Dashboard</Link>
-          <span className="text-zinc-800">|</span>
-          <Link href="/buy-page" className="py-2 px-4 rounded-xl bg-pink-500 hover:bg-pink-600 text-black font-bold tracking-tight transition-all hover:scale-105 active:scale-95 shadow-md">
-            Buy Ad Page 🛒
-          </Link>
-        </div>
-      </header>
+      <Header />
 
       {/* Hero Section */}
       <main className="flex-1 flex flex-col items-center justify-center py-20 px-6 max-w-5xl mx-auto z-10 text-center gap-10">
@@ -51,7 +34,7 @@ export default function Home() {
         {/* Playful badge */}
         <div className="flex flex-col items-center gap-4">
           <div className="px-4 py-1.5 rounded-full bg-white/5 border-2 border-white/10 text-[10px] uppercase font-mono tracking-widest text-yellow-405 font-bold shadow-lg rotate-1">
-            🔥 Welcome to the fun side of advertising!
+            🔥 Welcome to the future of advertising!
           </div>
 
           <h1 className="text-5xl md:text-8xl font-black tracking-tight text-white max-w-4xl leading-[1.05] drop-shadow-lg">
@@ -98,7 +81,7 @@ export default function Home() {
               </p>
             </div>
             <Link href="/reader" className="text-xs font-mono text-pink-450 group-hover:text-pink-400 group-hover:translate-x-1.5 transition-transform flex items-center gap-1.5 mt-2 cursor-pointer font-bold">
-              Let&apos;s Flip Pages! &rarr;
+              {"Let's Flip Pages! →"}
             </Link>
           </div>
 
@@ -115,7 +98,7 @@ export default function Home() {
               </p>
             </div>
             <Link href="/dashboard" className="text-xs font-mono text-cyan-450 group-hover:text-cyan-400 group-hover:translate-x-1.5 transition-transform flex items-center gap-1.5 mt-2 cursor-pointer font-bold">
-              Analyze Engagement! &rarr;
+              {"Analyze Engagement! →"}
             </Link>
           </div>
 
@@ -132,7 +115,7 @@ export default function Home() {
               </p>
             </div>
             <Link href="/buy-page" className="text-xs font-mono text-yellow-450 group-hover:text-yellow-405 group-hover:translate-x-1.5 transition-transform flex items-center gap-1.5 mt-2 cursor-pointer font-bold">
-              Design My Ad Slot! &rarr;
+              {"Design My Ad Slot! →"}
             </Link>
           </div>
 
