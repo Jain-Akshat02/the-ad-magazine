@@ -26,6 +26,11 @@ body {
   overflow-x: hidden;
 }
 
+.magazine-scroll {
+  scroll-snap-type: y mandatory;
+  overscroll-behavior-y: contain;
+}
+
 /* Animations */
 @keyframes slideIn {
   from {

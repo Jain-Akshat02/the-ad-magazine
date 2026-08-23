@@ -1,0 +1,21 @@
+{
+  "id": "autumn-2026",
+  "title": "Autumn Fun Issue '26",
+  "season": "Autumn",
+  "year": 2026,
+  "cover": {
+    "title": "theadmagazine: Autumn Fun Issue '26",
+    "category": "Cover Story🎉",
+    "author": "The Fun Squad",
+    "content": "Welcome to theadmagazine, the internet's most entertaining AI-integrated ad playground! Grab your favorite soda, read silly articles, click some buttons, and chat with goofy AI product characters."
+  },
+  "layout": [
+    { "type": "cover" },
+    { "type": "editorial", "ref": "office-desk-slime" },
+    { "type": "ad", "ref": "chronochuckle" },
+    { "type": "editorial", "ref": "ai-cat-legs" },
+    { "type": "ad", "ref": "zapbuggy" },
+    { "type": "ad", "ref": "puffyco" },
+    { "type": "ad-slot" }
+  ]
+}

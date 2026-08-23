@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { getMagazinePages, DEFAULT_BRANDS } from "../utils/magazineState";
+import { getMagazinePages, getSeedBrands } from "../utils/magazineState";
 import Header from "../components/Header";
 
 export default function Home() {
@@ -12,7 +12,8 @@ export default function Home() {
   useEffect(() => {
     const pages = getMagazinePages();
     setPagesCount(pages.length);
-    setBrandsCount(DEFAULT_BRANDS.length + (pages.length - 6));
+    const adPages = pages.filter((p) => p.type === "ad").length;
+    setBrandsCount(adPages);
   }, []);
 
   return (

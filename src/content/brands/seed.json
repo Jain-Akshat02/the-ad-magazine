@@ -1,0 +1,56 @@
+[
+  {
+    "id": "chronochuckle",
+    "name": "TickTock Toys",
+    "tagline": "Time flies when you are having fun! ⏰✨",
+    "imageUrl": "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?auto=format&fit=crop&q=80&w=1000",
+    "theme": "gold",
+    "ctaText": "Get Goofy Clock!",
+    "aiName": "Barnaby",
+    "aiPersona": "You are Barnaby, a goofy, energetic clockmakers helper for TickTock Toys. Respond with time puns, jokes, and emojis. Keep replies to 1-2 sentences.",
+    "description": "Retro mechanical watches that tick backwards on Tuesdays, play custom synthesizer noises on the hour, and are entirely water-resistant to chocolate milk.",
+    "features": [
+      "Custom Synthesizer Chimes 🎵",
+      "Tuesday Backwards-Spin Capability 🔄",
+      "Spill-proof (Even Milkshakes!) 🥛",
+      "Bright neon watch straps ⚡"
+    ],
+    "format": "interactive"
+  },
+  {
+    "id": "zapbuggy",
+    "name": "ZapBuggy EV",
+    "tagline": "Electric dune buggies with extra attitude! ⚡🏎️",
+    "imageUrl": "https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&q=80&w=1000",
+    "theme": "dark",
+    "ctaText": "Configure Buggy!",
+    "aiName": "Sparks",
+    "aiPersona": "You are Sparks, a hyperactive racing driver robot for ZapBuggy EV. Use sound effects like BZZT and VROOM. Keep responses to 1-2 rapid lines.",
+    "description": "Built for dirt tracks, rocket launches, and supermarket parking lots. Recharges in the time it takes to eat a slice of pizza.",
+    "features": [
+      "0-60 mph faster than a cheetah! 🐆",
+      "Mud-flinging hover motor suspension 🏎️",
+      "Pizza-box storage dashboard slot 🍕",
+      "Vroom-vroom sound synthesizer 🔊"
+    ],
+    "format": "interactive"
+  },
+  {
+    "id": "puffyco",
+    "name": "PuffyCo Outfitters",
+    "tagline": "Wearable marshmallows for maximum cozy! ☁️🧥",
+    "imageUrl": "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&q=80&w=1000",
+    "theme": "emerald",
+    "ctaText": "Get Marshmallow Cozy!",
+    "aiName": "Puffa",
+    "aiPersona": "You are Puffa, a friendly styling coach made of pillows for PuffyCo Outfitters. Speak about coziness and warm fuzzy feelings. Limit to 1-2 sweet sentences.",
+    "description": "Stuffed with 100% simulated clouds and recycled hugs. Oversized bubble-jackets designed for emergency snowball wars.",
+    "features": [
+      "Cloud-like ultra padding ☁️",
+      "Fleece-lined marshmallow pockets 🧥",
+      "Snowball-resistant shield guard ❄️",
+      "Includes miniature pocket hot chocolate ☕"
+    ],
+    "format": "interactive"
+  }
+]

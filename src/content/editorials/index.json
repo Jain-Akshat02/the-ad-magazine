@@ -1,0 +1,20 @@
+{
+  "office-desk-slime": {
+    "id": "edit-1",
+    "title": "Is Your Office Desk Secretly a Slime Swamp?",
+    "author": "Giggle McSilly",
+    "category": "Office Shenanigans",
+    "readTime": "3 min giggle",
+    "imageUrl": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1000",
+    "content": "Science reveals that 9 out of 10 desks left unattended for over 48 hours begin to grow microscopic bounce-house particles. We investigate the mysterious sticky syrup behind your keyboard, why your favorite pen keeps walking towards the break room, and how to negotiate a peace treaty with the dust bunny under your CPU..."
+  },
+  "ai-cat-legs": {
+    "id": "edit-2",
+    "title": "How to Prompt AI to Draw a Cat with 12 Legs",
+    "author": "Pixel Prankster",
+    "category": "Tech Jokes",
+    "readTime": "4 min snort",
+    "imageUrl": "https://images.unsplash.com/photo-1547891654-e66ed7edd96c?auto=format&fit=crop&q=80&w=1000",
+    "content": "We spent 24 straight hours asking neural networks to depict a standard tabby cat, but with exactly 12 legs. The results were: a multi-legged caterpillar cat, an abstract spider-kitten, and a server room crash in Munich. Read on for the full prompt recipes that will puzzle artificial programmers and wow your group chats!"
+  }
+}

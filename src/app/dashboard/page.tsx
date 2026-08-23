@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   getMagazinePages,
+  getSeedBrands,
   getAdInteractions,
-  DEFAULT_BRANDS,
   BrandAd,
   AdInteraction
 } from "../../utils/magazineState";
@@ -21,8 +21,8 @@ export default function DashboardPage() {
     const pages = getMagazinePages();
     const allBrands: BrandAd[] = [];
 
-    DEFAULT_BRANDS.forEach(b => {
-      if (!allBrands.some(e => e.id === b.id)) allBrands.push(b);
+    getSeedBrands().forEach((b) => {
+      if (!allBrands.some((e) => e.id === b.id)) allBrands.push(b);
     });
 
     pages.forEach((p) => {

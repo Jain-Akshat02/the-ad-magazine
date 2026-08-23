@@ -5,6 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Show, SignInButton, UserButton } from "@clerk/nextjs";
 
+import { useUser } from "@clerk/nextjs";
+import { addUserQuery } from "../utils/magazineState";
+
 function SubscriptionAlert() {
   const [mounted, setMounted] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -61,22 +64,59 @@ function SubscriptionAlert() {
 
 export default function Header() {
   const pathname = usePathname();
+  const { user } = useUser();
   const [mounted, setMounted] = useState(false);
   const [isAdText, setIsAdText] = useState(true);
+  const [isAdminMode, setIsAdminMode] = useState(false);
+
+  // Support ticket form states
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [supportName, setSupportName] = useState("");
+  const [supportEmail, setSupportEmail] = useState("");
+  const [supportMsg, setSupportMsg] = useState("");
+  const [supportSuccess, setSupportSuccess] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    setIsAdminMode(localStorage.getItem("thead_admin_mode") === "true");
+
+    const onAdminModeChange = () => {
+      setIsAdminMode(localStorage.getItem("thead_admin_mode") === "true");
+    };
+    window.addEventListener("storage", onAdminModeChange);
+    window.addEventListener("thead-admin-mode-change", onAdminModeChange);
+
     const interval = setInterval(() => {
       setIsAdText((prev) => !prev);
     }, 4000);
-    return () => clearInterval(interval);
-  }, []);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("storage", onAdminModeChange);
+      window.removeEventListener("thead-admin-mode-change", onAdminModeChange);
+    };
+  }, [pathname]);
+
+  const handleSupportSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supportName || !supportEmail || !supportMsg) return;
+    
+    addUserQuery(supportName, supportEmail, supportMsg);
+    setSupportSuccess(true);
+    
+    // Clear fields
+    setSupportMsg("");
+    setTimeout(() => {
+      setSupportSuccess(false);
+      setIsSupportOpen(false);
+    }, 2000);
+  };
 
   return (
     <div className="z-45 w-full relative">
       <header className="px-6 py-4.5 border-b border-white/10 flex items-center justify-between bg-zinc-950/70 backdrop-blur sticky top-0 z-40">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-pink-500 via-purple-600 to-yellow-450 flex items-center justify-center font-black text-black text-sm rotate-[-4deg] group-hover:rotate-6 transition-all duration-300">
+          <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-pink-500 via-purple-600 to-yellow-455 flex items-center justify-center font-black text-black text-sm rotate-[-4deg] group-hover:rotate-6 transition-all duration-300">
             ad
           </div>
           <span className="font-extrabold text-lg tracking-tight text-white font-sans group-hover:text-pink-400 transition-colors">
@@ -95,6 +135,29 @@ export default function Header() {
             <Link href="/dashboard" className="hover:text-cyan-400 transition hover:scale-105">
               ⚡ Portal Dashboard
             </Link>
+          )}
+
+          <span className="text-zinc-800">|</span>
+          <button
+            onClick={() => {
+              if (user) {
+                setSupportName(user.fullName || "");
+                setSupportEmail(user.primaryEmailAddress?.emailAddress || "");
+              }
+              setIsSupportOpen(true);
+            }}
+            className="hover:text-amber-300 transition hover:scale-105 cursor-pointer uppercase font-mono tracking-wider"
+          >
+            💬 Support
+          </button>
+
+          {mounted && isAdminMode && (
+            <>
+              <span className="text-zinc-800">|</span>
+              <Link href="/admin" className="hover:text-yellow-405 transition hover:scale-105 flex items-center gap-1">
+                Admin
+              </Link>
+            </>
           )}
 
           <span className="text-zinc-800">|</span>
@@ -139,6 +202,81 @@ export default function Header() {
 
       {/* Dismissible speech-bubble subscription alert */}
       <SubscriptionAlert />
+
+      {/* SUPPORT MODAL DIALOG */}
+      {isSupportOpen && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#0e0a16] border border-white/10 rounded-2xl shadow-2xl relative overflow-hidden animate-zoom-in font-mono text-xs text-white p-6">
+            <div className="flex justify-between items-center border-b border-white/5 pb-2 mb-4">
+              <h4 className="text-sm font-black text-white">💬 Contact Support Query</h4>
+              <button
+                onClick={() => setIsSupportOpen(false)}
+                className="text-zinc-500 hover:text-white p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            {supportSuccess ? (
+              <div className="py-8 text-center flex flex-col items-center gap-4">
+                <span className="text-3xl animate-bounce">📬</span>
+                <div>
+                  <h5 className="font-bold text-emerald-400">Query Logged Successfully!</h5>
+                  <p className="text-[10px] text-zinc-450 mt-2 font-sans">
+                    Admin team has been alerted! You can check resolution statuses in the Admin Dashboard query center.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSupportSubmit} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-zinc-550">Your Name</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="e.g. Pixel Artist"
+                    value={supportName}
+                    onChange={(e) => setSupportName(e.target.value)}
+                    className="bg-zinc-900 border border-white/15 rounded-xl p-2.5 text-white outline-none focus:border-pink-500 text-xs"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-zinc-550">Your Email</label>
+                  <input
+                    required
+                    type="email"
+                    placeholder="artist@neuralnet.com"
+                    value={supportEmail}
+                    onChange={(e) => setSupportEmail(e.target.value)}
+                    className="bg-zinc-900 border border-white/15 rounded-xl p-2.5 text-white outline-none focus:border-pink-500 text-xs"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-zinc-550">How can our admin squads help you?</label>
+                  <textarea
+                    required
+                    rows={4}
+                    placeholder="Type your concern here regarding ad billing, edits, prompt settings..."
+                    value={supportMsg}
+                    onChange={(e) => setSupportMsg(e.target.value)}
+                    className="bg-zinc-900 border border-white/15 rounded-xl p-2.5 text-white outline-none focus:border-pink-500 text-xs resize-none font-sans leading-relaxed"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-pink-500 hover:bg-pink-600 text-black font-extrabold py-3.5 rounded-xl transition cursor-pointer text-center mt-2"
+                >
+                  Send Query &bull; Alert Admin 🚀
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
