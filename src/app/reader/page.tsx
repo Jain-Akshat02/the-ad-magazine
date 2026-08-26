@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   getMagazinePages,
+  fetchMagazinePagesFromApi,
   saveAdInteraction,
   simulateAIChat,
   type MagazinePage,

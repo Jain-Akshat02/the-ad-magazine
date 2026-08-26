@@ -1,7 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Prisma schema for theadmagazine PostgreSQL database
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +7,96 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+model BrandAd {
+  id               String         @id @default(cuid())
+  name             String
+  tagline          String
+  imageUrl         String
+  theme            String         @default("neon")
+  ctaText          String         @default("Visit Website")
+  ctaUrl           String?
+  secondaryCtaText String?
+  secondaryCtaUrl  String?
+  aiName           String         @default("AI Assistant")
+  aiPersona        String         @default("Friendly assistant")
+  format           String         @default("interactive")
+  description      String?
+  features         String[]       @default([])
+  isSeed           Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  interactions     AdInteraction?
+  chats            ChatMessage[]
+
+  @@map("brand_ads")
+}
+
+model Editorial {
+  id        String   @id @default(cuid())
+  title     String
+  author    String
+  category  String
+  readTime  String
+  imageUrl  String?
+  content   String
+  isSeed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("editorials")
+}
+
+model AdInteraction {
+  id           String   @id @default(cuid())
+  brandId      String   @unique
+  brand        BrandAd  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  views        Int      @default(0)
+  likes        Int      @default(0)
+  clicks       Int      @default(0)
+  chatSessions Int      @default(0)
+  timeSpent    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("ad_interactions")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  brandId   String
+  brand     BrandAd  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  role      String
+  text      String
+  timestamp String
+  createdAt DateTime @default(now())
+
+  @@map("chat_messages")
+}
+
+model UserQuery {
+  id        String       @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  status    String       @default("Open")
+  timestamp String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  replies   QueryReply[]
+
+  @@map("user_queries")
+}
+
+model QueryReply {
+  id        String    @id @default(cuid())
+  queryId   String
+  query     UserQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+  role      String    @default("admin")
+  text      String
+  timestamp String
+  createdAt DateTime  @default(now())
+
+  @@map("query_replies")
 }
